@@ -1,0 +1,19 @@
+##############################################
+# Syntax Coloring Map For WiFiSupportESP32
+##############################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+WiFiSupportESP32	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+NetWork	KEYWORD2
+isConnected	KEYWORD2
+isSmartConfig KEYWORD2
+getNetwork KEYWORD2
+exportInfoNetwork KEYWORD2

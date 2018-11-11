@@ -1,0 +1,21 @@
+{
+    "name": "WiFi Support Library for ESP32",
+    "keywords": "WiFiSupportESP32",
+    "description": "WiFi Support Library for ESP32",
+    "authors": {
+        "name": "thiminhnhut",
+        "email": "thiminhnhut@gmail.com",
+        "url": "https://github.com/thiminhnhut",
+        "maintainer": true
+    },
+    "version": "1.0.0",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/thiminhnhut/WiFiSupportESP32.git"
+    },
+    "export": {
+        "include": "WiFiSupportESP32"
+    },
+    "frameworks": "arduino",
+    "platforms": "espressif32"
+}
