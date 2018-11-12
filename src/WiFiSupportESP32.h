@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 #include <WiFi.h>
-#include <EEPROM.h>
+#include <Preferences.h>
 
 struct NetWork {
     String ssid;
@@ -27,6 +27,16 @@ private:
     int8_t _pin = -1;
     uint8_t _state;
 
+    bool _debug = false;
+    Print *_print;
+
+    Preferences _preferences;
+    const char* _keyWiFi = "wifi";
+    const char* _keySSID = "ssid";
+    const char* _keyPassword = "password";
+    String _defaultSSID = "";
+    String _defaultPassword = "";
+
     NetWork _network;
     NetWork _getNetwork();
     String _getSSID();
@@ -42,13 +52,25 @@ private:
     String _getBSSID();
     String _getHostName();
 
-    void _writeNetwork(unsigned int address);
-    void _readNetwork(unsigned int address);
-    void _setFlagSmartConfig(unsigned int address);
+    void _exportInfoNetwork();
+
+    void _writeNetwork();
+    void _readNetwork();
 
     void _on();
     void _off();
     void _blink();
+
+    void _debug_ssid_password();
+    void _debug_connect_wifi();
+    void _debug_wait_connect();
+    void _debug_connect_wifi_success();
+    void _debug_connect_wifi_fail();
+    void _debug_start_smart_config();
+    void _debug_no_received_smart_config();
+    void _debug_received_smart_config();
+    void _debug_smart_config_success();
+    void _debug_smart_config_fail();
 
 public:
 
@@ -56,15 +78,15 @@ public:
 
     WiFiSupportESP32(int8_t pin, uint8_t state);
 
+    WiFiSupportESP32(Print *print, int8_t pin, uint8_t state);
+
     bool isConnected(const char* ssid, const char* password, unsigned int timeout);
 
-    bool isSmartConfig(unsigned int address, unsigned int size, unsigned int timeout);
+    bool isSmartConfig(unsigned int timeout);
 
     bool isConnected();
 
     NetWork getNetwork();
-
-    void exportInfoNetwork(Print &print);
 
 };
 #endif

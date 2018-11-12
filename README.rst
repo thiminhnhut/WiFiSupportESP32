@@ -5,7 +5,7 @@ Thư viện kết nối WiFi cho ESP32
 :Info: Github <https://github.com/thiminhnhut/WiFiSupportESP32>
 :Author: Thi Minh Nhựt <thiminhnhut@gmail.com>
 :Date: $Date: 11/11/2018 $
-:Revision: $Revision: 1.0.0 $
+:Revision: $Revision: 1.1.0 $
 :Description: Thư viện kết nối WiFi cho ESP32
 
 ===============================================================
@@ -51,15 +51,15 @@ Thư viện WiFiSupportESP32
 
     WiFiSupportESP32(int8_t pin, uint8_t state);
 
+    WiFiSupportESP32(Print *print, int8_t pin, uint8_t state);
+
     bool isConnected(const char* ssid, const char* password, unsigned int timeout);
 
-    bool isSmartConfig(unsigned int address, unsigned int size, unsigned int timeout);
+    bool isSmartConfig(unsigned int timeout);
 
     bool isConnected();
 
     NetWork getNetwork();
-
-    void exportInfoNetwork(Print &print);
 
   * File `WiFiSupportESP32.cpp <https://github.com/thiminhnhut/WiFiSupportESP32/blob/master/src/WiFiSupportESP32.cpp>`_.
 
@@ -74,6 +74,13 @@ Chức năng của thư viện WiFiSupportESP32
 
 * Kết nối WiFi cho ESP32 với ``SSID`` và ``Password``.
 
-* Kết nối WiFi cho ESP32 với giao thức SmartConfig (thông tin ``SSID`` và ``Password`` được lưu trong ``EEPROM``).
+* Kết nối WiFi cho ESP32 với giao thức SmartConfig (thông tin ``SSID`` và ``Password`` được lưu trong Flash (sử dụng phân vùng ``NVS (Non-volatile storage)``) với thư viện `Preferences <https://github.com/espressif/arduino-esp32/tree/master/libraries/Preferences>`_.
 
 * Lấy thông tin của mạng WiFi đang kết nối (``struct NetWork``).
+
+Revision
+========
+
+* `Version 1.0.0 <https://github.com/thiminhnhut/WiFiSupportESP32/releases/tag/1.0.0>`_ (Sử dụng ``EEPROM`` để lưu thông tin ``SSID`` và ``Password``).
+
+* `Version 1.1.0 <https://github.com/thiminhnhut/WiFiSupportESP32/releases/tag/1.1.0>`_ (Sử dụng phân vùng ``NVS`` để lưu thông tin ``SSID`` và ``Password``).

@@ -10,6 +10,14 @@ WiFiSupportESP32::WiFiSupportESP32(int8_t pin, uint8_t state) {
     pinMode(pin, OUTPUT);
 }
 
+WiFiSupportESP32::WiFiSupportESP32(Print *print, int8_t pin, uint8_t state) {
+    _debug = true;
+    this->_print = print;
+    _pin = pin;
+    _state = state;
+    pinMode(pin, OUTPUT);
+}
+
 bool WiFiSupportESP32::isConnected(const char *ssid, const char *password, unsigned int timeout) {
     _on();
 
@@ -19,43 +27,49 @@ bool WiFiSupportESP32::isConnected(const char *ssid, const char *password, unsig
     while (millis() - _start <= timeout) {
         if (isConnected()) {
             _network = _getNetwork();
+
+            _exportInfoNetwork();
+
             _off();
+
+            _debug_connect_wifi_success();
+
             return true;
-        } else {
-            delay(0);
         }
+
+        _debug_wait_connect();
     }
 
     _blink();
 
+    _debug_connect_wifi_fail();
+
     return false;
 }
 
-bool WiFiSupportESP32::isSmartConfig(unsigned int address, unsigned int size, unsigned int timeout) {
+bool WiFiSupportESP32::isSmartConfig(unsigned int timeout) {
     _on();
 
-    EEPROM.begin(size);
+    _readNetwork();
 
-    // _setFlagSmartConfig(address);
-
-    _readNetwork(address);
-
-    // Serial.println(_network.ssid);
-    // Serial.println(_network.password);
+    _debug_ssid_password();
 
     bool status = false;
+
     if (_network.ssid.length() > 0 && _network.password.length() > 0) {
-         status = isConnected(_network.ssid.c_str(), _network.password.c_str(), timeout);
-         if (status) {
-             _network = _getNetwork();
-             _off();
-             return true;
-         } else {
-             _blink();
-         }
+        _debug_connect_wifi();
+
+        status = isConnected(_network.ssid.c_str(), _network.password.c_str(), timeout);
+
+        if (status) {
+            _network = _getNetwork();
+            return true;
+        }
     }
 
     if (!status) {
+        _debug_start_smart_config();
+
         WiFi.mode(WIFI_AP_STA);
         WiFi.beginSmartConfig();
 
@@ -63,23 +77,39 @@ bool WiFiSupportESP32::isSmartConfig(unsigned int address, unsigned int size, un
         while (!WiFi.smartConfigDone()) {
             if (millis() - _start > timeout) {
                 _blink();
+
+                _debug_no_received_smart_config();
+
                 return false;
             }
-            delay(0);
+
+            _debug_wait_connect();
         }
+
+        _debug_received_smart_config();
 
         while (millis() - _start <= timeout) {
             if (isConnected()) {
                 _network = _getNetwork();
-                _writeNetwork(address);
+
+                _writeNetwork();
+
                 _off();
+
+                _exportInfoNetwork();
+
+                _debug_smart_config_success();
+
                 return true;
             }
-            delay(0);
+
+            _debug_wait_connect();
         }
     }
 
     _blink();
+
+    _debug_smart_config_fail();
 
     return false;
 }
@@ -88,22 +118,24 @@ bool WiFiSupportESP32::isConnected() {
     return WiFi.status() == WL_CONNECTED;
 }
 
-void WiFiSupportESP32::exportInfoNetwork(Print &print) {
-    if (isConnected()) {
-        print.println(F("Export Info Network"));
-        print.print(F("SSID:")); print.println(_network.ssid);
-        print.print(F("Password:")); print.println(_network.password);
-        print.print(F("IP:")); print.println(_network.ip);
-        print.print(F("Getway:")); print.println(_network.getway);
-        print.print(F("Netmask:")); print.println(_network.netmask);
-        print.print(F("DNS:")); print.println(_network.dns);
-        print.print(F("RSSI:")); print.println(_network.rssi);
-        print.print(F("Mode:")); print.println(_network.modeString);
-        print.print(F("Channel:")); print.println(_network.channel);
-        print.print(F("BSSID:")); print.println(_network.bssid);
-        print.print(F("Hostname:")); print.println(_network.hostname);
-    } else {
-        print.println("Connect wifi fail");
+void WiFiSupportESP32::_exportInfoNetwork() {
+    if (_debug) {
+        if (isConnected()) {
+            _print->println(F("\nExport Info Network"));
+            _print->print(F("SSID:")); _print->println(_network.ssid);
+            _print->print(F("Password:")); _print->println(_network.password);
+            _print->print(F("IP:")); _print->println(_network.ip);
+            _print->print(F("Getway:")); _print->println(_network.getway);
+            _print->print(F("Netmask:")); _print->println(_network.netmask);
+            _print->print(F("DNS:")); _print->println(_network.dns);
+            _print->print(F("RSSI:")); _print->println(_network.rssi);
+            _print->print(F("Mode:")); _print->println(_network.modeString);
+            _print->print(F("Channel:")); _print->println(_network.channel);
+            _print->print(F("BSSID:")); _print->println(_network.bssid);
+            _print->print(F("Hostname:")); _print->println(_network.hostname);
+        } else {
+            _print->println("Connect wifi fail");
+        }
     }
 }
 
@@ -189,48 +221,18 @@ String WiFiSupportESP32::_getHostName() {
     return WiFi.getHostname();
 }
 
-void WiFiSupportESP32::_writeNetwork(unsigned int address) {
-    EEPROM.writeBool(address, true);
-
-    unsigned int _address = address + 1;
-    EEPROM.write(address, _network.ssid.length());
-
-    _address += 1;
-    EEPROM.write(_address, _network.password.length());
-
-    _address += _network.ssid.length();
-    EEPROM.writeString(_address, _network.ssid);
-
-    _address += _network.password.length();
-    EEPROM.writeString(_address, _network.password);
-
-    EEPROM.commit();
+void WiFiSupportESP32::_writeNetwork() {
+    _preferences.begin(_keyWiFi, false);
+    _preferences.putString(_keySSID, _network.ssid);
+    _preferences.putString(_keyPassword, _network.password);
+    _preferences.end();
 }
 
-void WiFiSupportESP32::_readNetwork(unsigned int address) {
-    bool _connected = EEPROM.readBool(address);
-
-    if (_connected) {
-        unsigned int _address = address + 1;
-        unsigned char lenSSID = EEPROM.read(address);
-
-        _address += 1;
-        unsigned char lenPassword = EEPROM.read(_address);
-
-        _address += lenSSID;
-        _network.ssid = EEPROM.readString(_address);
-
-        _address += lenPassword;
-        _network.password = EEPROM.readString(_address);
-    } else {
-        _network.ssid = "";
-        _network.password = "";
-    }
-}
-
-void WiFiSupportESP32::_setFlagSmartConfig(unsigned int address) {
-    EEPROM.writeBool(address, false);
-    EEPROM.commit();
+void WiFiSupportESP32::_readNetwork() {
+    _preferences.begin(_keyWiFi, false);
+    _network.ssid = _preferences.getString(_keySSID, _defaultSSID);
+    _network.password = _preferences.getString(_keyPassword, _defaultPassword);
+    _preferences.end();
 }
 
 void WiFiSupportESP32::_on() {
@@ -246,10 +248,90 @@ void WiFiSupportESP32::_off() {
 }
 
 void WiFiSupportESP32::_blink() {
-    for (unsigned char i = 0; i < 60; i++) {
+    for (unsigned char i = 0; i < 20; i++) {
         _on();
         delay(500);
         _off();
         delay(500);
+    }
+}
+
+void WiFiSupportESP32::_debug_ssid_password() {
+    if (_debug) {
+        _print->print(F("Reading SSID and Password (Preferences):\t"));
+
+        _print->print(F("SSID:"));
+        if (_network.ssid.length() > 0) {
+            _print->print(_network.ssid);
+            _print->print(F("(len:")); _print->print(_network.ssid.length()); _print->print(F(")"));
+        } else {
+            _print->print(F("None"));
+        }
+
+        _print->print(F("\tPassword:"));
+        if (_network.password.length() > 0) {
+            _print->print(_network.password);
+            _print->print(F("(len:")); _print->print(_network.password.length()); _print->println(F(")"));
+        } else {
+            _print->println(F("None"));
+        }
+    }
+}
+
+void WiFiSupportESP32::_debug_connect_wifi() {
+    if (_debug) {
+        _print->print(F("Connecting WiFi:\tSSID:")); _print->print(_network.ssid);
+        _print->print(F("\tPassword:")); _print->println(_network.password);
+    }
+}
+
+void WiFiSupportESP32::_debug_wait_connect() {
+    if (_debug) {
+        _print->print(F("."));
+        delay(100);
+    } else {
+        delay(0);
+    }
+}
+
+void WiFiSupportESP32::_debug_connect_wifi_success() {
+    if (_debug) {
+        _print->println(F("\nConnecting WiFi Success!"));
+    }
+}
+
+void WiFiSupportESP32::_debug_connect_wifi_fail() {
+    if (_debug) {
+        _print->println(F("\nConnecting WiFi Failed!"));
+    }
+}
+
+void WiFiSupportESP32::_debug_start_smart_config() {
+    if (_debug) {
+        _print->println(F("Start SmartConfig"));
+    }
+}
+
+void WiFiSupportESP32::_debug_no_received_smart_config() {
+    if (_debug) {
+        _print->println(F("\nSmartConfig Received Failed, Timeout Error!"));
+    }
+}
+
+void WiFiSupportESP32::_debug_received_smart_config() {
+    if (_debug) {
+        _print->println(F("\nSmartConfig received, Waiting for WiFi..."));
+    }
+}
+
+void WiFiSupportESP32::_debug_smart_config_success() {
+    if (_debug) {
+        _print->println(F("\nSmartConfig Success!"));
+    }
+}
+
+void WiFiSupportESP32::_debug_smart_config_fail() {
+    if (_debug) {
+        _print->println(F("\nSmartConfig Fail, Timeout error!"));
     }
 }
