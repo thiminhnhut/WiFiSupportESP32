@@ -48,10 +48,7 @@ bool WiFiSupportESP32::isSmartConfig(unsigned int address, unsigned int size, un
          status = isConnected(_network.ssid.c_str(), _network.password.c_str(), timeout);
          if (status) {
              _network = _getNetwork();
-             _off();
              return true;
-         } else {
-             _blink();
          }
     }
 
