@@ -3,7 +3,8 @@
 
 #include <Arduino.h>
 #include <WiFi.h>
-#include <Preferences.h>
+#include "esp_system.h"
+#include <esp_wifi.h>
 
 struct NetWork {
     String ssid;
@@ -30,7 +31,6 @@ private:
     bool _debug = false;
     Print *_print;
 
-    Preferences _preferences;
     const char* _keyWiFi = "wifi";
     const char* _keySSID = "ssid";
     const char* _keyPassword = "password";
@@ -54,7 +54,6 @@ private:
 
     void _exportInfoNetwork();
 
-    void _writeNetwork();
     void _readNetwork();
 
     void _on();

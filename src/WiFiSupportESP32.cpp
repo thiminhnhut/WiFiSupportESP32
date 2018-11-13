@@ -92,8 +92,6 @@ bool WiFiSupportESP32::isSmartConfig(unsigned int timeout) {
             if (isConnected()) {
                 _network = _getNetwork();
 
-                _writeNetwork();
-
                 _off();
 
                 _exportInfoNetwork();
@@ -221,18 +219,12 @@ String WiFiSupportESP32::_getHostName() {
     return WiFi.getHostname();
 }
 
-void WiFiSupportESP32::_writeNetwork() {
-    _preferences.begin(_keyWiFi, false);
-    _preferences.putString(_keySSID, _network.ssid);
-    _preferences.putString(_keyPassword, _network.password);
-    _preferences.end();
-}
-
 void WiFiSupportESP32::_readNetwork() {
-    _preferences.begin(_keyWiFi, false);
-    _network.ssid = _preferences.getString(_keySSID, _defaultSSID);
-    _network.password = _preferences.getString(_keyPassword, _defaultPassword);
-    _preferences.end();
+    WiFi.mode(WIFI_AP_STA);
+    wifi_config_t config;
+    esp_wifi_get_config(WIFI_IF_STA, &config);
+    _network.ssid = String(reinterpret_cast<const char*>(config.sta.ssid));
+    _network.password = String(reinterpret_cast<const char*>(config.sta.password));
 }
 
 void WiFiSupportESP32::_on() {
@@ -258,7 +250,7 @@ void WiFiSupportESP32::_blink() {
 
 void WiFiSupportESP32::_debug_ssid_password() {
     if (_debug) {
-        _print->print(F("Reading SSID and Password (Preferences):\t"));
+        _print->print(F("Reading SSID and Password (NVR):\t"));
 
         _print->print(F("SSID:"));
         if (_network.ssid.length() > 0) {
